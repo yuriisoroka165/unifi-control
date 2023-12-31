@@ -1,15 +1,17 @@
-import axios, { AxiosResponse } from "axios";
-import * as https from "https";
+import axios from "axios";
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+let csrf = null;
+
 
 axios
-    .post(
-        "https://192.168.30.174:8443/api/login",
-        {
-            username: "admin",
-            password: "admin330691",
-        },
-        { httpsAgent: agent }
-    )
-    .then(response => console.log(response));
+    .post("https://192.168.30.174:8443/api/login", {
+        username: "admin",
+        password: "admin330691",
+    })
+    .then(response => csrf = response.headers["set-cookie"]);
+
+
+
