@@ -1,17 +1,32 @@
 import axios from "axios";
+import dotenv from "dotenv";
 
+dotenv.config();
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+const { BASIC_URL, NODE_TLS_REJECT_UNAUTHORIZED } = process.env;
 
-let csrf = null;
+let csrfToken = null;
 
-
-axios
-    .post("https://192.168.30.174:8443/api/login", {
+const getAuthData = async () => {
+    const request = await axios.post(`${BASIC_URL}/api/login`, {
         username: "admin",
         password: "admin330691",
-    })
-    .then(response => csrf = response.headers["set-cookie"]);
+    });
+    const rawData = request.headers["set-cookie"];
+    const csrf = rawData?.[1].split(";")[0];
+    const unifises = rawData?.[0].split(";")[0];
 
+    return [csrf, unifises];
+};
 
+const tryToGetDataFromController = async () => {
+    const cookieData = await getAuthData();
+    const request = await axios.get(`${BASIC_URL}/api/self/sites`, {
+        headers: {
+            Cookie: `${cookieData[0]}; ${cookieData[1]}`,
+        },
+    });
+    const siteName = request.data.data[0].name;
+    return siteName;
+};
 
