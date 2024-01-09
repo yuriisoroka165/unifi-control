@@ -3,30 +3,49 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const { BASIC_URL, NODE_TLS_REJECT_UNAUTHORIZED } = process.env;
-
-let csrfToken = null;
+const { NODE_TLS_REJECT_UNAUTHORIZED, BASIC_URL, CTRLUSERNAME, PASSWORD } =
+    process.env;
 
 const getAuthData = async () => {
-    const request = await axios.post(`${BASIC_URL}/api/login`, {
-        username: "admin",
-        password: "admin330691",
-    });
-    const rawData = request.headers["set-cookie"];
-    const csrf = rawData?.[1].split(";")[0];
-    const unifises = rawData?.[0].split(";")[0];
+    try {
+        const authRequest = await axios.post(`${BASIC_URL}/api/login`, {
+            username: CTRLUSERNAME,
+            password: PASSWORD,
+        });
+        const authRawData = authRequest.headers["set-cookie"];
+        const csrf = authRawData?.[1].split(";")[0];
+        const unifises = authRawData?.[0].split(";")[0];
 
-    return [csrf, unifises];
+        const siteNameRequest = await axios.get(`${BASIC_URL}/api/self/sites`, {
+            headers: {
+                Cookie: `${csrf}; ${unifises}`,
+            },
+        });
+        const siteName = siteNameRequest.data.data[0].name;
+
+        return [csrf, unifises, siteName];
+    } catch (error) {
+        console.log(error);
+    }
 };
 
-const tryToGetDataFromController = async () => {
-    const cookieData = await getAuthData();
-    const request = await axios.get(`${BASIC_URL}/api/self/sites`, {
-        headers: {
-            Cookie: `${cookieData[0]}; ${cookieData[1]}`,
-        },
-    });
-    const siteName = request.data.data[0].name;
-    return siteName;
+// getAuthData().then(data => console.log(data));
+
+const getAllWirelessClients = async () => {
+    const data = await getAuthData();
+    const listOfClientsRequest = await axios.get(
+        `${BASIC_URL}/api/s/${data?.[2]}/stat/sta`,
+        {
+            headers: {
+                Cookie: `${data?.[0]}; ${data?.[1]}`,
+            },
+        }
+    );
+    const listOfAllClients = listOfClientsRequest.data.data;
 };
 
+getAllWirelessClients().then(data =>
+    data.map((item: any) =>
+        console.log(item?.["is_wired"] === true ? null : item)
+    )
+);
